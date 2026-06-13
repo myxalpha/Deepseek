@@ -1,11 +1,10 @@
+import os
 from openai import OpenAI
 
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
     api_key=os.environ.get("NVIDIA_API_KEY")
 )
-
-import os
 
 completion = client.chat.completions.create(
     model="deepseek-ai/deepseek-v4-pro",
