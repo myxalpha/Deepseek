@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek × Nemotron</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0c0e;--surface:#141416;--surface2:#1a1a1e;--border:#232328;--border2:#2e2e36;
+  --text:#e2e2e8;--muted:#55555f;--subtle:#333338;
+  --nem:#22c55e;--ds:#7c6af7;--accent:#f97316;
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px}
+
+/* Layout */
+.app{display:flex;height:100vh;max-width:1100px;margin:0 auto}
+
+/* Sidebar */
+.sidebar{
+  width:220px;flex-shrink:0;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:16px 12px;gap:4px;
+  overflow-y:auto;
+}
+.sidebar-logo{padding:8px 8px 16px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.sidebar-logo .name{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text)}
+.sidebar-logo .sub{font-size:10px;color:var(--muted);margin-top:2px}
+.section-label{font-size:10px;color:var(--muted);font-family:var(--mono);padding:8px 8px 4px;letter-spacing:.05em;text-transform:uppercase}
+
+/* Mode toggle */
+.mode-btn{
+  display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;
+  border:1px solid transparent;background:none;cursor:pointer;
+  font-size:12px;font-family:var(--mono);color:var(--muted);
+  transition:all .15s;text-align:left;width:100%;
+}
+.mode-btn:hover{background:var(--surface2);color:var(--text)}
+.mode-btn.active{background:var(--surface2);border-color:var(--border2);color:var(--text)}
+.mode-btn .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.mode-direct .dot{background:var(--ds)}
+.mode-agent .dot{background:var(--nem)}
+.mode-btn .badge{
+  margin-left:auto;font-size:9px;padding:1px 5px;border-radius:3px;
+  background:color-mix(in srgb,var(--nem) 15%,transparent);
+  color:var(--nem);border:1px solid color-mix(in srgb,var(--nem) 30%,transparent);
+}
+
+.skill-btn{
+  display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:6px;
+  border:1px solid transparent;background:none;cursor:pointer;
+  font-size:11px;font-family:var(--mono);color:var(--muted);
+  transition:all .15s;text-align:left;width:100%;
+}
+.skill-btn:hover{background:var(--surface2);color:var(--text)}
+.skill-btn.active{border-color:var(--skill-color,#555);color:var(--skill-color,#aaa);background:color-mix(in srgb,var(--skill-color,#555) 10%,transparent)}
+.skill-btn .sdot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.8;flex-shrink:0}
+
+.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}
+.think-toggle{
+  display:flex;align-items:center;gap:7px;padding:7px 8px;
+  font-size:11px;font-family:var(--mono);color:var(--muted);cursor:pointer;
+}
+.think-toggle:hover{color:var(--text)}
+.think-toggle input{accent-color:var(--ds)}
+#clearBtn{
+  width:100%;background:none;border:1px solid var(--border);border-radius:6px;
+  color:var(--muted);font-size:11px;font-family:var(--mono);
+  padding:6px;cursor:pointer;margin-top:6px;transition:all .15s;
+}
+#clearBtn:hover{border-color:var(--border2);color:var(--text)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* Header */
+header{
+  padding:12px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.model-pills{display:flex;gap:6px}
+.pill{
+  font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:12px;
+  border:1px solid var(--border2);
+}
+.pill.nem{color:var(--nem);border-color:color-mix(in srgb,var(--nem) 35%,transparent);background:color-mix(in srgb,var(--nem) 8%,transparent)}
+.pill.ds{color:var(--ds);border-color:color-mix(in srgb,var(--ds) 35%,transparent);background:color-mix(in srgb,var(--ds) 8%,transparent)}
+.mode-label{margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--muted)}
+.mode-label span{color:var(--text)}
+
+/* Messages */
+#messages{flex:1;overflow-y:auto;padding:24px 20px;display:flex;flex-direction:column;gap:20px}
+#messages::-webkit-scrollbar{width:3px}
+#messages::-webkit-scrollbar-thumb{background:var(--subtle);border-radius:4px}
+
+.msg{display:flex;gap:12px;animation:fadeUp .18s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.avatar{width:24px;height:24px;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:var(--mono);margin-top:2px}
+.msg.user .avatar{background:#1e1e2e;border:1px solid #3b3b5c;color:var(--ds)}
+.msg.ai .avatar{background:var(--surface);border:1px solid var(--border);color:var(--muted)}
+.bubble{flex:1;min-width:0}
+.meta{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:5px}
+.meta .who{font-weight:600}
+.msg.user .meta .who{color:var(--ds)}
+.stag{padding:1px 6px;border-radius:3px;font-size:9px;border:1px solid currentColor;opacity:.7}
+
+.body{font-size:13px;line-height:1.75;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.msg.user .body{background:#12121e;border-color:#252540;white-space:pre-wrap}
+
+/* Agent pipeline card */
+.pipeline-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.pipeline-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:11px;font-family:var(--mono);color:var(--muted)}
+.pipeline-header .title{color:var(--text);font-weight:600}
+
+.stage{border-bottom:1px solid var(--border)}
+.stage:last-child{border-bottom:none}
+.stage-header{
+  padding:10px 16px;display:flex;align-items:center;gap:8px;
+  font-size:11px;font-family:var(--mono);cursor:pointer;
+  transition:background .15s;user-select:none;
+}
+.stage-header:hover{background:var(--surface2)}
+.stage-icon{font-size:13px}
+.stage-label{color:var(--muted)}
+.stage-label.done{color:var(--text)}
+.stage-status{margin-left:auto;font-size:10px}
+.status-pending{color:var(--muted)}
+.status-running{color:var(--accent);animation:blink 1s infinite}
+.status-done{color:var(--nem)}
+.status-warn{color:#f59e0b}
+@keyframes blink{0%,100%{opacity:.4}50%{opacity:1}}
+.stage-body{display:none;padding:12px 16px;border-top:1px solid var(--border);background:#0a0a0c}
+.stage-body.open{display:block}
+
+/* Score bar */
+.score-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.score-num{font-family:var(--mono);font-size:20px;font-weight:700}
+.score-bar-wrap{flex:1;height:6px;background:var(--subtle);border-radius:3px;overflow:hidden}
+.score-bar{height:100%;border-radius:3px;transition:width .5s ease}
+.verdict-text{font-size:12px;color:var(--text);margin-bottom:8px;line-height:1.5}
+.issue-list,.improve-list{list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.issue-list li{font-size:11px;color:#f87171;font-family:var(--mono);padding-left:12px;position:relative}
+.issue-list li::before{content:"✗ ";position:absolute;left:0}
+.improve-list li{font-size:11px;color:#fbbf24;font-family:var(--mono);padding-left:12px;position:relative}
+.improve-list li::before{content:"→ ";position:absolute;left:0}
+.final-notes{font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;margin-top:4px;font-family:var(--mono)}
+
+/* Thinking block */
+.think-block{margin-bottom:8px;border:1px solid #1e2e1e;border-radius:6px;overflow:hidden}
+.think-toggle-btn{background:#0f1a0f;padding:6px 12px;font-size:10px;color:#4a6a4a;cursor:pointer;font-family:var(--mono);display:flex;align-items:center;gap:6px;user-select:none}
+.think-toggle-btn:hover{color:#8aaa8a}
+.think-body{display:none;padding:10px;font-size:10px;color:#4a6a4a;font-family:var(--mono);line-height:1.6;white-space:pre-wrap;max-height:200px;overflow-y:auto;background:#080f08}
+
+/* Markdown */
+.body p,.stage-body p{margin-bottom:10px}
+.body p:last-child,.stage-body p:last-child{margin-bottom:0}
+.body code,.stage-body code{font-family:var(--mono);font-size:11.5px;background:#111;padding:2px 5px;border-radius:3px;color:#a5f3d0}
+.body pre,.stage-body pre{background:#060608 !important;border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;margin:10px 0;position:relative}
+.body pre code,.stage-body pre code{background:none;padding:0;color:inherit;font-size:11.5px}
+.copy-btn{position:absolute;top:7px;right:7px;background:var(--subtle);border:none;border-radius:3px;color:var(--muted);font-size:9px;font-family:var(--mono);padding:2px 7px;cursor:pointer;transition:all .15s}
+.copy-btn:hover{background:var(--ds);color:#fff}
+.body ul,.body ol,.stage-body ul,.stage-body ol{padding-left:18px;margin-bottom:8px}
+.body li,.stage-body li{margin-bottom:3px}
+.body h2,.stage-body h2{font-size:14px;font-weight:600;color:#fff;margin:12px 0 6px;border-bottom:1px solid var(--border);padding-bottom:5px}
+.body h3,.stage-body h3{font-size:12px;font-weight:600;color:var(--text);margin:10px 0 4px}
+.body strong,.stage-body strong{color:#fff}
+.body table,.stage-body table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px}
+.body th,.stage-body th{background:var(--surface2);padding:5px 8px;text-align:left;border:1px solid var(--border);font-family:var(--mono);font-size:10px}
+.body td,.stage-body td{padding:5px 8px;border:1px solid var(--border)}
+
+/* Dots */
+.dots{display:flex;gap:4px;padding:3px 0}
+.dots span{width:5px;height:5px;border-radius:50%;background:var(--ds);opacity:.3;animation:pulse 1.2s infinite}
+.dots span:nth-child(2){animation-delay:.2s}
+.dots span:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,80%,100%{opacity:.2}40%{opacity:.9}}
+
+/* Empty */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;gap:6px}
+.empty-icon{font-size:30px;margin-bottom:8px}
+.empty h2{font-size:16px;font-weight:500;color:var(--text)}
+.empty p{font-size:12px;color:var(--muted);max-width:340px;line-height:1.6;margin-bottom:16px}
+.chip-grid{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:440px}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:5px 12px;font-size:11px;cursor:pointer;transition:all .15s;color:var(--muted);font-family:var(--mono)}
+.chip:hover{border-color:var(--border2);color:var(--text)}
+
+/* Input */
+footer{padding:12px 20px 16px;border-top:1px solid var(--border);flex-shrink:0}
+.input-wrap{display:flex;gap:8px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 11px;transition:border-color .15s}
+.input-wrap:focus-within{border-color:#3a3a5c}
+#input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:var(--sans);font-size:13px;resize:none;min-height:20px;max-height:140px;line-height:1.55}
+#input::placeholder{color:var(--subtle)}
+#send{background:var(--ds);border:none;border-radius:7px;width:30px;height:30px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:opacity .15s}
+#send:hover{opacity:.85}
+#send:disabled{opacity:.25;cursor:not-allowed}
+#send svg{width:13px;height:13px;fill:#fff}
+.footer-hint{display:flex;gap:8px;font-size:10px;color:var(--muted);margin-top:7px;font-family:var(--mono)}
+.footer-hint .mode-indicator{margin-left:auto;display:flex;align-items:center;gap:5px}
+.mode-dot{width:6px;height:6px;border-radius:50%}
+
+@media(max-width:680px){
+  .sidebar{width:180px}
+  .sidebar-logo .name{font-size:11px}
+}
+@media(max-width:520px){
+  .sidebar{display:none}
+  .main{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="name">⚡ coder</div>
+      <div class="sub">dual-model pipeline</div>
+    </div>
+
+    <div class="section-label">Mode</div>
+    <button class="mode-btn mode-direct active" onclick="setMode('direct',this)">
+      <span class="dot"></span>Direct
+    </button>
+    <button class="mode-btn mode-agent" onclick="setMode('agent',this)">
+      <span class="dot"></span>Agent
+      <span class="badge">NEW</span>
+    </button>
+
+    <div class="section-label" id="skillSection">Skill</div>
+    <button class="skill-btn active" data-skill="" onclick="setSkill(this)" style="--skill-color:#666">
+      <span class="sdot"></span>general
+    </button>
+    <div id="skillList"></div>
+
+    <div class="sidebar-footer">
+      <label class="think-toggle">
+        <input type="checkbox" id="thinkToggle"> deep think
+      </label>
+      <button id="clearBtn" onclick="clearChat()">clear chat</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <header>
+      <div class="model-pills">
+        <div class="pill nem">Nemotron Ultra</div>
+        <div class="pill ds">DeepSeek V4-Pro</div>
+      </div>
+      <div class="mode-label">mode: <span id="modeLabelText">direct</span></div>
+    </header>
+
+    <div id="messages">
+      <div class="empty" id="empty">
+        <div class="empty-icon">⚡</div>
+        <h2>Two models, one pipeline</h2>
+        <p>Use <b>Direct</b> for fast answers. Use <b>Agent</b> to let Nemotron plan, DeepSeek execute, and Nemotron review.</p>
+        <div class="chip-grid">
+          <div class="chip" onclick="q('Build a FastAPI backend with JWT auth')">FastAPI + JWT</div>
+          <div class="chip" onclick="q('Security audit this code')">Security audit</div>
+          <div class="chip" onclick="q('Write edge case tests for this function')">Edge tests</div>
+          <div class="chip" onclick="q('Debug this error')">Debug error</div>
+          <div class="chip" onclick="q('Build a responsive dark dashboard UI')">Dark dashboard</div>
+          <div class="chip" onclick="q('Full code review with quality score')">Code review</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="input-wrap">
+        <textarea id="input" placeholder="Ask anything..." rows="1"></textarea>
+        <button id="send" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="footer-hint">
+        <span>enter send · shift+enter newline</span>
+        <div class="mode-indicator">
+          <div class="mode-dot" id="modeDot" style="background:var(--ds)"></div>
+          <span id="modeHint">direct · deepseek v4-pro</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<script>
+const messagesEl = document.getElementById('messages');
+const inputEl    = document.getElementById('input');
+const sendBtn    = document.getElementById('send');
+const emptyEl    = document.getElementById('empty');
+const thinkToggle= document.getElementById('thinkToggle');
+
+let history = [];
+let isLoading = false;
+let activeMode = 'direct';
+let activeSkill = '';
+let skills = [];
+
+// Load skills
+async function loadSkills() {
+  try {
+    const res = await fetch('/skills');
+    const data = await res.json();
+    skills = data.skills;
+    const list = document.getElementById('skillList');
+    skills.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'skill-btn';
+      btn.dataset.skill = s.id;
+      btn.dataset.color = s.color;
+      btn.style.setProperty('--skill-color', s.color);
+      btn.innerHTML = `<span class="sdot"></span>${s.icon} ${s.label}`;
+      btn.onclick = function(){ setSkill(this) };
+      list.appendChild(btn);
+    });
+  } catch(e) { console.error(e) }
+}
+
+function setMode(mode, btn) {
+  activeMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('modeLabelText').textContent = mode;
+  const skillSection = document.getElementById('skillSection');
+  if (mode === 'agent') {
+    skillSection.style.opacity = '.4';
+    document.getElementById('modeDot').style.background = 'var(--nem)';
+    document.getElementById('modeHint').textContent = 'agent · nemotron → deepseek → nemotron';
+  } else {
+    skillSection.style.opacity = '1';
+    document.getElementById('modeDot').style.background = 'var(--ds)';
+    document.getElementById('modeHint').textContent = 'direct · deepseek v4-pro';
+  }
+}
+
+function setSkill(btn) {
+  document.querySelectorAll('.skill-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeSkill = btn.dataset.skill || '';
+}
+
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+});
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+function q(text) { inputEl.value = text; inputEl.focus(); }
+
+function clearChat() {
+  history = [];
+  messagesEl.innerHTML = '';
+  messagesEl.appendChild(emptyEl);
+  emptyEl.style.display = '';
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderBody(el, content) {
+  el.innerHTML = marked.parse(content);
+  el.querySelectorAll('pre').forEach(pre => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'copy';
+    btn.onclick = () => {
+      navigator.clipboard.writeText(pre.querySelector('code')?.textContent || '');
+      btn.textContent = '✓';
+      setTimeout(() => btn.textContent = 'copy', 1800);
+    };
+    pre.appendChild(btn);
+  });
+  el.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+}
+
+function thinkBlock(content, label) {
+  if (!content) return '';
+  return `<div class="think-block">
+    <div class="think-toggle-btn" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+      ▶ ${label}
+    </div>
+    <div class="think-body">${esc(content)}</div>
+  </div>`;
+}
+
+function addUserMsg(text) {
+  emptyEl.style.display = 'none';
+  const msg = document.createElement('div');
+  msg.className = 'msg user';
+  msg.innerHTML = `
+    <div class="avatar">you</div>
+    <div class="bubble">
+      <div class="meta"><span class="who">You</span></div>
+      <div class="body"></div>
+    </div>`;
+  msg.querySelector('.body').textContent = text;
+  messagesEl.appendChild(msg);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function addTyping() {
+  const msg = document.createElement('div');
+  msg.className = 'msg ai'; msg.id = 'typing';
+  msg.innerHTML = `
+    <div class="avatar">ai</div>
+    <div class="bubble">
+      <div class="meta"><span class="who">Assistant</span></div>
+      <div class="body"><div class="dots"><span></span><span></span><span></span></div></div>
+    </div>`;
+  messagesEl.appendChild(msg);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function addDirectReply(data) {
+  document.getElementById('typing')?.remove();
+  const sk = skills.find(s => s.id === data.skill);
+  const msg = document.createElement('div');
+  msg.className = 'msg ai';
+  const tags = [
+    sk ? `<span class="stag" style="color:${sk.color}">${sk.icon} ${sk.label}</span>` : '',
+    data.reasoning ? `<span class="stag" style="color:var(--ds)">🧠 thinking</span>` : ''
+  ].join('');
+  msg.innerHTML = `
+    <div class="avatar">ds</div>
+    <div class="bubble">
+      <div class="meta"><span class="who" style="color:var(--ds)">DeepSeek V4-Pro</span>${tags}</div>
+      ${data.reasoning ? thinkBlock(data.reasoning,'DeepSeek reasoning') : ''}
+      <div class="body"></div>
+    </div>`;
+  renderBody(msg.querySelector('.body'), data.reply || data.error || 'No response');
+  messagesEl.appendChild(msg);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+// Agent pipeline card
+function addPipelineCard() {
+  document.getElementById('typing')?.remove();
+  const card = document.createElement('div');
+  card.className = 'msg ai'; card.id = 'pipeline-msg';
+  card.innerHTML = `
+    <div class="avatar">⚡</div>
+    <div class="bubble" style="width:100%">
+      <div class="meta"><span class="who" style="color:var(--nem)">Agent Pipeline</span><span class="stag" style="color:var(--nem)">Nemotron → DeepSeek → Nemotron</span></div>
+      <div class="pipeline-card">
+        <div class="pipeline-header">
+          <span class="title">Processing your request...</span>
+        </div>
+        <div class="stage" id="stage-plan">
+          <div class="stage-header" onclick="toggleStage('plan')">
+            <span class="stage-icon">🧠</span>
+            <span class="stage-label" id="label-plan">Nemotron planning</span>
+            <span class="stage-status status-pending" id="status-plan">waiting</span>
+          </div>
+          <div class="stage-body" id="body-plan"></div>
+        </div>
+        <div class="stage" id="stage-execute">
+          <div class="stage-header" onclick="toggleStage('execute')">
+            <span class="stage-icon">⚙️</span>
+            <span class="stage-label" id="label-execute">DeepSeek executing</span>
+            <span class="stage-status status-pending" id="status-execute">waiting</span>
+          </div>
+          <div class="stage-body" id="body-execute"></div>
+        </div>
+        <div class="stage" id="stage-review">
+          <div class="stage-header" onclick="toggleStage('review')">
+            <span class="stage-icon">🔍</span>
+            <span class="stage-label" id="label-review">Nemotron reviewing</span>
+            <span class="stage-status status-pending" id="status-review">waiting</span>
+          </div>
+          <div class="stage-body" id="body-review"></div>
+        </div>
+      </div>
+    </div>`;
+  messagesEl.appendChild(card);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return card;
+}
+
+function toggleStage(name) {
+  const body = document.getElementById(`body-${name}`);
+  if (body) body.classList.toggle('open');
+}
+
+function setStageRunning(name, label) {
+  const el = document.getElementById(`status-${name}`);
+  const lel = document.getElementById(`label-${name}`);
+  if (el) { el.className = 'stage-status status-running'; el.textContent = 'running...'; }
+  if (lel && label) { lel.textContent = label; lel.className = 'stage-label done'; }
+}
+function setStageStatus(name, text, cls) {
+  const el = document.getElementById(`status-${name}`);
+  if (el) { el.className = `stage-status ${cls}`; el.textContent = text; }
+}
+
+function handlePlanEvent(d) {
+  setStageStatus('plan', '✓ done', 'status-done');
+  const body = document.getElementById('body-plan');
+  if (!body) return;
+  const sk = d.skill ? skills.find(s => s.id === d.skill) : null;
+  body.innerHTML = `
+    ${d.nemotron_thinking ? thinkBlock(d.nemotron_thinking, 'Nemotron thinking') : ''}
+    <div style="margin-bottom:8px">
+      ${sk ? `<span style="color:${sk.color};font-family:var(--mono);font-size:11px">${sk.icon} ${sk.label} mode selected</span><br>` : ''}
+      <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">${esc(d.reasoning||'')}</span>
+    </div>
+    ${d.steps && d.steps.length ? `<ol style="padding-left:16px;display:flex;flex-direction:column;gap:4px">${d.steps.map(s=>`<li style="font-size:11px;color:var(--muted);font-family:var(--mono)">${esc(s)}</li>`).join('')}</ol>` : ''}
+    <div style="margin-top:8px;padding:8px 10px;background:#0a0a0e;border:1px solid var(--border);border-radius:5px;font-size:11px;color:#8080a0;font-family:var(--mono)">${esc(d.plan||'')}</div>
+  `;
+  body.classList.add('open');
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function handleExecuteEvent(d) {
+  setStageStatus('execute', '✓ done', 'status-done');
+  const body = document.getElementById('body-execute');
+  if (!body) return;
+  body.innerHTML = d.deepseek_thinking ? thinkBlock(d.deepseek_thinking, 'DeepSeek reasoning') : '';
+  const content = document.createElement('div');
+  renderBody(content, d.output || '');
+  body.appendChild(content);
+  body.classList.add('open');
+  // Also update pipeline header with final answer reference
+  const ph = document.querySelector('.pipeline-header .title');
+  if (ph) ph.textContent = 'Pipeline complete ↓ expand stages to explore';
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function handleReviewEvent(d) {
+  const score = d.score || 0;
+  const color = score >= 8 ? '#22c55e' : score >= 6 ? '#f59e0b' : '#ef4444';
+  setStageStatus('review', d.approved ? '✓ approved' : '⚠ issues', d.approved ? 'status-done' : 'status-warn');
+  const body = document.getElementById('body-review');
+  if (!body) return;
+  body.innerHTML = `
+    <div class="score-row">
+      <div class="score-num" style="color:${color}">${score}<span style="font-size:13px;color:var(--muted)">/10</span></div>
+      <div class="score-bar-wrap"><div class="score-bar" style="width:${score*10}%;background:${color}"></div></div>
+    </div>
+    <div class="verdict-text">${esc(d.verdict||'')}</div>
+    ${d.issues && d.issues.length ? `<ul class="issue-list">${d.issues.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>` : ''}
+    ${d.improvements && d.improvements.length ? `<ul class="improve-list">${d.improvements.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>` : ''}
+    ${d.final_notes ? `<div class="final-notes">${esc(d.final_notes)}</div>` : ''}
+  `;
+  body.classList.add('open');
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text || isLoading) return;
+  isLoading = true;
+  sendBtn.disabled = true;
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+
+  history.push({ role: 'user', content: text });
+  addUserMsg(text);
+  addTyping();
+
+  if (activeMode === 'direct') {
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history, skill: activeSkill || null, thinking: thinkToggle.checked })
+      });
+      const data = await res.json();
+      if (!data.error) history.push({ role: 'assistant', content: data.reply });
+      addDirectReply(data);
+    } catch(e) {
+      document.getElementById('typing')?.remove();
+      addDirectReply({ reply: `**Error:** ${e.message}` });
+    }
+  } else {
+    // Agent mode — SSE streaming
+    addPipelineCard();
+    try {
+      const res = await fetch('/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history, thinking: thinkToggle.checked })
+      });
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let executorOutput = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const d = JSON.parse(line.slice(6));
+            if (d.type === 'stage') {
+              const name = d.stage;
+              setStageRunning(name, d.label);
+            } else if (d.type === 'plan') {
+              handlePlanEvent(d);
+            } else if (d.type === 'execute') {
+              executorOutput = d.output;
+              handleExecuteEvent(d);
+            } else if (d.type === 'review') {
+              handleReviewEvent(d);
+            } else if (d.type === 'done') {
+              if (executorOutput) history.push({ role: 'assistant', content: executorOutput });
+            } else if (d.type === 'error') {
+              document.querySelector('.pipeline-header .title').textContent = `Error: ${d.message}`;
+            }
+          } catch(e) {}
+        }
+      }
+    } catch(e) {
+      document.querySelector('.pipeline-header .title').textContent = `Network error: ${e.message}`;
+    }
+  }
+
+  isLoading = false;
+  sendBtn.disabled = false;
+  inputEl.focus();
+}
+
+marked.setOptions({ breaks: true, gfm: true });
+loadSkills();
+</script>
+</body>
+</html>
